@@ -16,3 +16,33 @@ services:
         volumes:
             - ~/.flowise:/root/.flowise
         command: /bin/sh -c "sleep 3; flowise start"
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.user.entrypoints=websecure"
+            - "traefik.http.routers.user.rule=Host(`flowrise.$MY_DOMAIN`)"
+            - "traefik.http.routers.user.tls.certresolver=lets-encr"
+            - "traefik.http.routers.user.tls=true"
+
+
+    traefik:
+        image: "traefik:v2.1"
+        hostname: "traefik"
+        ports:
+        - "80:80"
+        - "443:443"
+        - "8080:8080"
+        volumes:
+        - "/var/run/docker.sock:/var/run/docker.sock:ro"
+        - "./traefik.yml:/traefik.yml:ro"
+        - "./acme.json:/acme.json"
+        labels:
+        ## HTTP REDIRECT
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+        - "traefik.http.routers.redirect-https.rule=hostregexp(`{host:.+}`)"
+        - "traefik.http.routers.redirect-https.entrypoints=web"
+        - "traefik.http.routers.redirect-https.middlewares=redirect-to-https"
+
+networks:
+    default:
+        external:
+            name: $DEFAULT_NETWORK
