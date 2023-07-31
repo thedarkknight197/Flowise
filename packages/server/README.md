@@ -29,9 +29,15 @@ FLOWISE_USERNAME=user
 FLOWISE_PASSWORD=1234
 ```
 
-## 🔎 Debugging
+## 🌱 Env Variables
 
-You can set `DEBUG=true` to the `.env` file. Refer [here](https://docs.flowiseai.com/environment-variables) for full list of env variables
+Flowise support different environment variables to configure your instance. You can specify the following variables in the `.env` file inside `packages/server` folder. Read [more](https://github.com/FlowiseAI/Flowise/blob/main/CONTRIBUTING.md#-env-variables)
+
+You can also specify the env variables when using `npx`. For example:
+
+```
+npx flowise start --PORT=3000 --DEBUG=true
+```
 
 ## 📖 Documentation
 

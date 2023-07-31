@@ -8,6 +8,7 @@ import { createClient } from 'redis'
 class RedisBackedChatMemory_Memory implements INode {
     label: string
     name: string
+    version: number
     description: string
     type: string
     icon: string
@@ -18,6 +19,7 @@ class RedisBackedChatMemory_Memory implements INode {
     constructor() {
         this.label = 'Redis-Backed Chat Memory'
         this.name = 'RedisBackedChatMemory'
+        this.version = 1.0
         this.type = 'RedisBackedChatMemory'
         this.icon = 'redis.svg'
         this.category = 'Memory'
@@ -36,50 +38,66 @@ class RedisBackedChatMemory_Memory implements INode {
                 type: 'string',
                 description: 'if empty, chatId will be used automatically',
                 default: '',
-                additionalParams: true
+                additionalParams: true,
+                optional: true
             },
             {
                 label: 'Session Timeouts',
                 name: 'sessionTTL',
                 type: 'number',
                 description: 'Omit this parameter to make sessions never expire',
+                additionalParams: true,
                 optional: true
             },
             {
                 label: 'Memory Key',
                 name: 'memoryKey',
                 type: 'string',
-                default: 'chat_history'
+                default: 'chat_history',
+                additionalParams: true
             }
         ]
     }
 
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
-        const baseURL = nodeData.inputs?.baseURL as string
-        const sessionId = nodeData.inputs?.sessionId as string
-        const sessionTTL = nodeData.inputs?.sessionTTL as number
-        const memoryKey = nodeData.inputs?.memoryKey as string
-
-        const chatId = options?.chatId as string
-
-        const redisClient = createClient({ url: baseURL })
-        let obj: RedisChatMessageHistoryInput = {
-            sessionId: sessionId ? sessionId : chatId,
-            client: redisClient
-        }
-
-        if (sessionTTL) {
-            obj = {
-                ...obj,
-                sessionTTL
-            }
-        }
-
-        let redisChatMessageHistory = new RedisChatMessageHistory(obj)
-        let redis = new BufferMemory({ memoryKey, chatHistory: redisChatMessageHistory, returnMessages: true })
-
-        return redis
+        return initalizeRedis(nodeData, options)
     }
+
+    async clearSessionMemory(nodeData: INodeData, options: ICommonObject): Promise<void> {
+        const redis = initalizeRedis(nodeData, options)
+        const sessionId = nodeData.inputs?.sessionId as string
+        const chatId = options?.chatId as string
+        options.logger.info(`Clearing Redis memory session ${sessionId ? sessionId : chatId}`)
+        await redis.clear()
+        options.logger.info(`Successfully cleared Redis memory session ${sessionId ? sessionId : chatId}`)
+    }
+}
+
+const initalizeRedis = (nodeData: INodeData, options: ICommonObject): BufferMemory => {
+    const baseURL = nodeData.inputs?.baseURL as string
+    const sessionId = nodeData.inputs?.sessionId as string
+    const sessionTTL = nodeData.inputs?.sessionTTL as number
+    const memoryKey = nodeData.inputs?.memoryKey as string
+
+    const chatId = options?.chatId as string
+
+    const redisClient = createClient({ url: baseURL })
+    let obj: RedisChatMessageHistoryInput = {
+        sessionId: sessionId ? sessionId : chatId,
+        client: redisClient
+    }
+
+    if (sessionTTL) {
+        obj = {
+            ...obj,
+            sessionTTL
+        }
+    }
+
+    let redisChatMessageHistory = new RedisChatMessageHistory(obj)
+    let redis = new BufferMemory({ memoryKey, chatHistory: redisChatMessageHistory, returnMessages: true })
+
+    return redis
 }
 
 module.exports = { nodeClass: RedisBackedChatMemory_Memory }
